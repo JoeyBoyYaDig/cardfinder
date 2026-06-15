@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CardFinder{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}?v=3">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('index') }}">CardFinder</a>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
