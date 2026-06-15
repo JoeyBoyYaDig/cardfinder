@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+
+{% block title %}Results for {{ query }} | CardFinder{% endblock %}
+
+{% block content %}
+  <section class="results-header">
+    <form class="search-form compact" action="{{ url_for('results') }}" method="get">
+      <label for="q">Card name or number</label>
+      <div class="search-row">
+        <input id="q" name="q" type="search" value="{{ query }}" placeholder="Search name, number, or 29/62" required>
+        <button type="submit">Search</button>
+      </div>
+      <div class="search-options">
+        <label>
+          <span>Sort by</span>
+          <select name="sort">
+            <option value="name" {% if sort == "name" %}selected{% endif %}>Name</option>
+            <option value="set" {% if sort == "set" %}selected{% endif %}>Set</option>
+            <option value="number" {% if sort == "number" %}selected{% endif %}>Card number</option>
+            <option value="newest" {% if sort == "newest" %}selected{% endif %}>Newest set</option>
+            <option value="oldest" {% if sort == "oldest" %}selected{% endif %}>Oldest set</option>
+            <option value="price_low" {% if sort == "price_low" %}selected{% endif %}>Price: low to high</option>
+            <option value="price_high" {% if sort == "price_high" %}selected{% endif %}>Price: high to low</option>
+          </select>
+        </label>
+        <label class="checkbox-option">
+          <input type="checkbox" name="full_art" value="1" {% if full_art %}checked{% endif %}>
+          <span>Full art only</span>
+        </label>
+      </div>
+    </form>
+
+    {% if query %}
+      <p class="result-count">
+        Showing {{ cards|length }} of {{ total_count }} result{% if total_count != 1 %}s{% endif %}
+        for <strong>{{ query }}</strong>
+        {% if total_pages > 1 %}(page {{ page }} of {{ total_pages }}){% endif %}
+      </p>
+    {% endif %}
+  </section>
+
+  {% if error %}
+    <div class="notice error">{{ error }}</div>
+  {% elif not query %}
+    <div class="notice">Enter a card name to start searching.</div>
+  {% elif not cards %}
+    <div class="notice">No cards matched that search.</div>
+  {% else %}
+    <section class="card-grid" aria-label="Card results">
+      {% for card in cards %}
+        <article class="card">
+          <div class="card-image-wrap">
+            {% if card.image %}
+              <img src="{{ card.image }}" alt="{{ card.name }} card image" loading="lazy">
+            {% else %}
+              <div class="missing-image">No image</div>
+            {% endif %}
+          </div>
+
+          <div class="card-body">
+            <h2>{{ card.name }}</h2>
+            <dl class="facts">
+              <div>
+                <dt>Set</dt>
+                <dd>{{ card.set_name }}</dd>
+              </div>
+              <div>
+                <dt>Number</dt>
+                <dd>{{ card.number }}</dd>
+              </div>
+              <div>
+                <dt>Rarity</dt>
+                <dd>{{ card.rarity }}</dd>
+              </div>
+              <div>
+                <dt>Artist</dt>
+                <dd>{{ card.artist }}</dd>
+              </div>
+            </dl>
+
+            <div class="prices">
+              <div class="section-heading">
+                <h3>Pricing</h3>
+                {% if card.price_summary.average %}
+                  <span>API avg {{ card.price_summary.average }}</span>
+                {% endif %}
+              </div>
+
+              <div class="price-snapshot">
+                {% for site in card.marketplace_comparisons %}
+                  {% if site.price %}
+                    <a class="site-price {{ site.comparison.status }}" href="{{ site.url }}" target="_blank" rel="noopener">
+                      <span>{{ site.source }}</span>
+                      <strong>{{ site.price }}</strong>
+                      <em>{{ site.comparison.label }}</em>
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+
+              <div class="ebay-sales" data-ebay-sales data-query="{{ card.ebay_query }}">
+                <div>
+                  <strong>eBay Last 10 Sales</strong>
+                  <span data-ebay-status>{{ card.ebay_sales.message }}</span>
+                </div>
+                <div class="ebay-sales-actions">
+                  <b data-ebay-average></b>
+                  <a href="{{ card.links.ebay_sold }}" target="_blank" rel="noopener">Sold listings</a>
+                </div>
+                <details class="manual-sales">
+                  <summary>Paste sold prices</summary>
+                  <textarea rows="4" placeholder="Paste eBay sold listing text or prices here"></textarea>
+                  <button type="button" data-manual-average>Calculate average</button>
+                  <span data-manual-result></span>
+                </details>
+              </div>
+
+              <details class="price-details">
+                <summary>Price details</summary>
+                {% if card.prices %}
+                  {% for price in card.prices %}
+                    <div class="price-row {{ price.comparison.status }}">
+                      <div class="price-row-heading">
+                        <strong>{{ price.source }}</strong>
+                        <span>{{ price.finish }}</span>
+                        <em>{{ price.comparison.label }}</em>
+                      </div>
+                      <dl>
+                        {% if price.market %}<div><dt>Market</dt><dd>{{ price.market }}</dd></div>{% endif %}
+                        {% if price.low %}<div><dt>Low</dt><dd>{{ price.low }}</dd></div>{% endif %}
+                        {% if price.mid %}<div><dt>Mid</dt><dd>{{ price.mid }}</dd></div>{% endif %}
+                        {% if price.high %}<div><dt>High</dt><dd>{{ price.high }}</dd></div>{% endif %}
+                        {% if price.directLow %}<div><dt>Direct Low</dt><dd>{{ price.directLow }}</dd></div>{% endif %}
+                      </dl>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <p class="muted">No market price data available from the API.</p>
+                {% endif %}
+              </details>
+
+              <details class="search-links">
+                <summary>Marketplace searches</summary>
+                <div>
+                  <a href="{{ card.links.ebay }}" target="_blank" rel="noopener">eBay</a>
+                  <a href="{{ card.links.pricecharting }}" target="_blank" rel="noopener">PriceCharting</a>
+                  <a href="{{ card.links.google_shopping }}" target="_blank" rel="noopener">Google Shopping</a>
+                </div>
+              </details>
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </section>
+
+    {% if total_pages > 1 %}
+      <nav class="pagination" aria-label="Result pages">
+        {% if page > 1 %}
+          <a href="{{ url_for('results', q=query, page=page - 1, sort=sort, full_art='1' if full_art else None) }}">Previous</a>
+        {% else %}
+          <span>Previous</span>
+        {% endif %}
+
+        <strong>Page {{ page }} of {{ total_pages }}</strong>
+
+        {% if page < total_pages %}
+          <a href="{{ url_for('results', q=query, page=page + 1, sort=sort, full_art='1' if full_art else None) }}">Next</a>
+        {% else %}
+          <span>Next</span>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% endif %}
+{% endblock %}
+
+{% block scripts %}
+  <script src="{{ url_for('static', filename='cardfinder.js') }}?v=4"></script>
+{% endblock %}
